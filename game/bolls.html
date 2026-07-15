@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <title> البلالين </title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #a9adff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      direction: rtl;
+      margin: 0;
+    }
+    .balloons-box {
+      position: relative;
+      width: 80%;
+      height: 80%;
+      border: 2px dashed rgba(0,0,0,0.1);
+      border-radius: 20px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.03);
+    }
+    .balloon {
+      width: 80px;
+      height: 100px;
+      border-radius: 50%;
+      position: absolute;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+      transition: opacity 0.45s, transform 0.45s;
+      /* حركة بسيطة تتأرجح يمين/شمال + فوق/تحت */
+      animation-name: float-move;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+    }
+    .balloon:hover { transform: scale(1.08); }
+    .balloon::after {
+      content: '';
+      position: absolute;
+      bottom: -18px;
+      left: 50%;
+      width: 2px;
+      height: 18px;
+      background: #555;
+      transform: translateX(-50%);
+    }
+    @keyframes float-move {
+      0%   { transform: translate(0, 0); }
+      25%  { transform: translate(8px, -8px); }
+      50%  { transform: translate(0, -15px); }
+      75%  { transform: translate(-8px, -8px); }
+      100% { transform: translate(0, 0); }
+    }
+
+
+.question-box {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 28px;            /* زودت البادينج */
+  border-radius: 16px;      /* تكبير الحواف */
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  display: none;
+  text-align: center;
+  width: 700px;             /* عرض ثابت أكبر */
+  max-width: 90%;           /* عشان لو الشاشة صغيرة ميكسرش */
+  direction: rtl;
+  font-size: 60px;          /* تكبير الخط */
+  line-height: 1.6;         /* مسافة بين السطور */
+}
+
+
+    .close-btn {
+      margin-top: 12px;
+      padding: 8px 14px;
+      border: none;
+      background: #f33;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    /* زر لإعادة اللعبة (اختياري ظاهر تحت الصندوق) */
+    .controls {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 9999;
+    }
+    .btn {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: #4b7bec;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="balloons-box" id="balloons-container"></div>
+
+  <div class="question-box" id="question-box" aria-hidden="true">
+    <p id="question-text"></p>
+    <button class="close-btn" id="close-btn">إغلاق</button>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="reset-btn">إعادة اللعبة</button>
+  </div>
+
+  <script>
+  (function(){
+    // ----- أسئلتك هنا -----
+    const questions = [
+      "  مين انا...؟ 🧔🏻🌊⛵🐔 ",
+      " ينبغي ان ........من الناس",
+      " بدا تاريخ الكنيسة بعظة ......الرسول",
+      "عظة بطرس الرسول الاولي ضمت .......نفس الي الكنيسة ",
+      "  🎉😎مبروك اخدت درجة السؤال ",
+
+      " في يوم ......حل الروح القدس علي الرسل",
+      ".....اول كنيسة كانت",
+      " مين انا لم يكن معي فضة ولا ذهب لكن اعطيت شخص شئ لم يحلم بة؟",
+      " 😁للاسف انا بسرق درجات ❌ ",
+      "  🎉😎مبروك اخدت درجة السؤال ",
+
+
+      "💥سمع الاية اللي ميس مريم قالت لنا نحفظها 🤗و ليك 3 درجات  ",
+      " من صعود السيد المسيح الي حلول الروح القدس ....يوم ",
+      " قول اكتر جزء عجبك في اليوم؟",
+      " انا بسرق الدرجات للاسف🙄",
+      " لو طالع المؤتمر هتاخد 3 درجات 🥰....... لكن لو مش طالع 😠 هتخسر درجات",
+      "  🎉😎مبروك اخدت درجة السؤال ",
+      
+    ];
+    // -----------------------
+
+    const colors = ["#e74c3c", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6", "#e67e22", "#1abc9c"];
+    const balloonsContainer = document.getElementById('balloons-container');
+    const questionBox = document.getElementById('question-box');
+    const questionText = document.getElementById('question-text');
+    const closeBtn = document.getElementById('close-btn');
+    const resetBtn = document.getElementById('reset-btn');
+
+    let placedPositions = [];
+
+    // توليد مكان عشوائي ويحاول يتجنب التزاحم (مع حد أقصى من المحاولات)
+    function generatePosition(boxW, boxH, w, h) {
+      const minDist = 92; // المسافة الدنيا بين مراكز البالونات
+      const maxAttempts = 300;
+      let attempts = 0;
+      while (attempts < maxAttempts) {
+        const x = Math.random() * Math.max(0, boxW - w);
+        const y = Math.random() * Math.max(0, boxH - h);
+        let ok = true;
+        for (const p of placedPositions) {
+          const dx = (p.x - x);
+          const dy = (p.y - y);
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < minDist) { ok = false; break; }
+        }
+        if (ok) {
+          placedPositions.push({x, y});
+          return {x, y};
+        }
+        attempts++;
+      }
+      // لو ما لاقاش مكان مناسب يرجع مكان عشوائي (بغض النظر عن المسافة)
+      const x = Math.random() * Math.max(0, boxW - w);
+      const y = Math.random() * Math.max(0, boxH - h);
+      placedPositions.push({x, y});
+      return {x, y};
+    }
+
+    function createBalloon(i, q, boxW, boxH) {
+      const w = 80, h = 100;
+      const balloon = document.createElement('div');
+      balloon.className = 'balloon';
+      balloon.textContent = i + 1;
+      balloon.style.background = colors[i % colors.length];
+
+      const pos = generatePosition(boxW, boxH, w, h);
+      balloon.style.left = `${pos.x}px`;
+      balloon.style.top = `${pos.y}px`;
+
+      // خصائص حركة عشوائية لكل بلونة (المدة والتأخير)
+      balloon.style.animationDuration = `${3 + Math.random()*2}s`;
+      balloon.style.animationDelay = `${Math.random()*1.8}s`;
+
+      // ربط السؤال بالبلونة مباشرة
+      balloon.dataset.question = q;
+
+      // اضف البلونة للصندوق
+      balloonsContainer.appendChild(balloon);
+
+      // منع الضغط المتكرر بعد أول نقرة
+      balloon.addEventListener('click', function handler() {
+        balloon.style.pointerEvents = 'none';
+        balloon.style.opacity = '0';
+        balloon.style.transform = 'scale(0.8)';
+        setTimeout(() => balloon.remove(), 450);
+
+        // عرض السؤال الخاص
+        questionText.textContent = balloon.dataset.question || '';
+        questionBox.style.display = 'block';
+        questionBox.setAttribute('aria-hidden', 'false');
+      });
+    }
+
+    // تهيئة / رسم البلالين (نظيفة: تمسح الموجود وتعيد الرسم)
+    function initBalloons() {
+      // حماية مزدوجة: لو بدأنا وخلصنا قبل كده نتوقف
+      if (window.__balloonsInited) return;
+      window.__balloonsInited = true;
+
+      // مسح أي بلالين قديمة
+      placedPositions = [];
+      balloonsContainer.innerHTML = '';
+
+      // احصل على أبعاد الصندوق، وإذا كانت صفر (نادر) استخدم أحجام احتياطية
+      const rect = balloonsContainer.getBoundingClientRect();
+      const boxW = rect.width > 10 ? rect.width : Math.max(window.innerWidth * 0.7, 300);
+      const boxH = rect.height > 10 ? rect.height : Math.max(window.innerHeight * 0.5, 300);
+
+      // أنشئ كل بلونة واربطها بسؤالها
+      for (let i = 0; i < questions.length; i++) {
+        createBalloon(i, questions[i], boxW, boxH);
+      }
+    }
+
+    // زر إغلاق السؤال
+    closeBtn.addEventListener('click', () => {
+      questionBox.style.display = 'none';
+      questionBox.setAttribute('aria-hidden', 'true');
+    });
+
+    // زر إعادة اللعبة: يمسح ويعيد التهيئة
+    resetBtn.addEventListener('click', () => {
+      // نحذف العلم عشان نسمح بإعادة التهيئة
+      window.__balloonsInited = false;
+      initBalloons();
+    });
+
+    // شغّل التهيئة بعد تحميل الصفحة (load) — آمن أكثر من DOMContentLoaded في حالات عرض الملف محلياً
+    window.addEventListener('load', () => {
+      // صغيرة تأخير بسيط يساعد لو المتصفح عمل reflow متأخر
+      setTimeout(initBalloons, 20);
+    });
+
+    // في حالة نُفّذ السكربت مرتين — نضمن أن أي محاولة لاحقة تمسح السابقة وتعيد رسم واحدة فقط
+    // (لو كان هنالك أي مشكلة، جربي تغلقي تبويبات Live Server وفتحي الملف مباشرة)
+  })();
+  </script>
+</body>
+</html>
